@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electricity Demand Forecasts</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #e8f0fe;
+            --secondary: #34a853;
+            --warning: #fbbc05;
+            --danger: #ea4335;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-600: #6c757d;
+            --gray-800: #343a40;
+            --gray-900: #212529;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--gray-100);
+            color: var(--gray-900);
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--gray-300);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        nav ul {
+            display: flex;
+            gap: 20px;
+            list-style: none;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--gray-600);
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        nav a:hover, nav a.active {
+            color: var(--primary);
+            background-color: var(--primary-light);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #E6F0FA 0%, #F5FAFF 100%);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 30%);
+            opacity: 0.5;
+            z-index: 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--gray-300);
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+            color: var(--gray-900);
+            z-index: 2;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        button:hover {
+            background-color: #0d62d1;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #e6f3e6 0%, #e0f7e9 100%);
+            background-image: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 20%);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            z-index: 2;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .filter-btn {
+            background-color: var(--gray-200);
+            color: var(--gray-800);
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .export-btn {
+            background-color: var(--secondary);
+            margin-left: 10px;
+        }
+
+        .export-btn:hover {
+            background-color: #2d9145;
+        }
+
+        .prediction-summary {
+            background-color: var(--gray-100);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .prediction-summary h3 {
+            margin-bottom: 10px;
+            color: var(--gray-800);
+        }
+
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--gray-300);
+            padding: 10px 0;
+        }
+
+        .prediction-item:last-child {
+            border-bottom: none;
+        }
+
+        footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-300);
+            text-align: center;
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 3v2"></path>
+                    <path d="M18 15v4"></path>
+                    <path d="M18 22v-1"></path>
+                    <path d="M6 3v4"></path>
+                    <path d="M6 15v2"></path>
+                    <path d="M6 22v-3"></path>
+                    <path d="M2 12h20"></path>
+                    <path d="M6 8v4"></path>
+                    <path d="M18 8v4"></path>
+                </svg>
+                PowerPredict AI
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/">Dashboard</a></li>
+                    <li><a href="/forecasts" class="active">Forecasts</a></li>
+                    <li><a href="/analytics">Analytics</a></li>
+                    {% if current_user.is_authenticated %}
+                        <li><a href="{{ url_for('logout') }}">Logout ({{ current_user.id }})</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('login') }}">Login</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </header>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <h2>Forecast Parameters</h2>
+                <form id="forecast-form">
+                    <div class="form-group">
+                        <label for="area">Area</label>
+                        <select id="area" name="area" required>
+                            <option value="0" selected>Central Delhi</option>
+                            <option value="1">North Delhi</option>
+                            <option value="2">South Delhi</option>
+                            <option value="3">East Delhi</option>
+                            <option value="4">West Delhi</option>
+                            <option value="5">New Delhi</option>
+                            <option value="6">Old Delhi</option>
+                            <option value="7">North West Delhi</option>
+                            <option value="8">North East Delhi</option>
+                            <option value="9">South West Delhi</option>
+                            <option value="10">South East Delhi</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateRange">Date Range</label>
+                        <input type="text" id="dateRange" name="dateRange" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="temperature">Average Temperature (°C)</label>
+                        <input type="number" step="0.01" id="temperature" name="temperature" value="38.50" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="humidity">Average Humidity (%)</label>
+                        <input type="number" step="0.01" id="humidity" name="humidity" value="60.00" required>
+                    </div>
+                    <button type="submit">Generate Forecast</button>
+                </form>
+                <div class="prediction-summary">
+                    <h3>Forecast Summary</h3>
+                    <div class="prediction-item">
+                        <span>Predicted Demand</span>
+                        <span id="summaryDemand">N/A</span>
+                    </div>
+                    <div class="prediction-item">
+                        <span>Confidence</span>
+                        <span id="summaryConfidence">N/A</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Electricity Demand Forecast</h2>
+                        <div class="filters">
+                            <button class="filter-btn export-btn">Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="forecast-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 PowerPredict AI - Electricity Demand Prediction Platform</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize date picker
+        flatpickr("#dateRange", {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            defaultDate: [new Date('2025-06-20'), new Date('2025-06-26')],
+            minDate: '2025-06-20',
+            maxDate: new Date(new Date('2025-06-20').setDate(new Date('2025-06-20').getDate() + 90))
+        });
+
+        // Generate dates for chart labels
+        const generateDates = (startDate, endDate) => {
+            const dates = [];
+            const current = new Date(startDate);
+            while (current <= endDate) {
+                dates.push(current.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}));
+                current.setDate(current.getDate() + 1);
+            }
+            return dates;
+        };
+
+        // Initialize chart data
+        let forecastDates = generateDates(new Date('2025-06-20'), new Date('2025-06-26'));
+        let predictedData = new Array(forecastDates.length).fill(null);
+        let upperBound = new Array(forecastDates.length).fill(null);
+        let lowerBound = new Array(forecastDates.length).fill(null);
+
+        // Initialize chart
+        document.addEventListener('DOMContentLoaded', function() {
+            let forecastChart;
+
+            const forecastCtx = document.getElementById('forecast-chart').getContext('2d');
+            forecastChart = new Chart(forecastCtx, {
+                type: 'line',
+                data: {
+                    labels: forecastDates,
+                    datasets: [
+                        {
+                            label: 'Predicted Demand',
+                            data: predictedData,
+                            borderColor: '#34a853',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#34a853',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Upper Bound',
+                            data: upperBound,
+                            borderColor: 'rgba(251, 188, 5, 0.5)',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Lower Bound',
+                            data: lowerBound,
+                            borderColor: 'rgba(251, 188, 5, 0.5)',
+                            backgroundColor: 'rgba(251, 188, 5, 0.2)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            fill: '+1',
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: 'var(--gray-900)' }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Electricity Demand (kW)',
+                                color: 'var(--gray-900)'
+                            },
+                            ticks: { color: 'var(--gray-900)' },
+                            grid: { color: 'var(--gray-300)' }
+                        },
+                        x: {
+                            ticks: { color: 'var(--gray-900)' },
+                            grid: { color: 'var(--gray-300)' }
+                        }
+                    }
+                }
+            });
+
+            // Export CSV functionality
+            document.querySelector('.export-btn').addEventListener('click', () => {
+                const csvContent = [
+                    'Date,Predicted Demand (kW),Lower Bound (kW),Upper Bound (kW)',
+                    ...forecastDates.map((date, i) => `${date},${predictedData[i] || ''},${lowerBound[i] || ''},${upperBound[i] || ''}`)
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'forecast_data.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            // Form submission handling
+            $('#forecast-form').on('submit', function(e) {
+                e.preventDefault();
+                const formData = $(this).serializeArray();
+                simulateForecast(formData, forecastChart);
+            });
+
+            function simulateForecast(formData, chart) {
+                const formValues = {};
+                formData.forEach(item => {
+                    formValues[item.name] = item.value;
+                });
+
+                // Validate inputs
+                if (!formValues.dateRange || isNaN(parseFloat(formValues.area)) || 
+                    isNaN(parseFloat(formValues.temperature)) || isNaN(parseFloat(formValues.humidity))) {
+                    alert('Please fill in all fields with valid values.');
+                    return;
+                }
+
+                const [startDate, endDate] = formValues.dateRange.split(' to ').map(d => new Date(d));
+                if (!startDate || !endDate || startDate > endDate) {
+                    alert('Please select a valid date range.');
+                    return;
+                }
+
+                const minDate = new Date('2025-06-20');
+                if (startDate < minDate) {
+                    alert('Please select a start date on or after June 20, 2025.');
+                    return;
+                }
+
+                forecastDates = generateDates(startDate, endDate);
+                const numDays = forecastDates.length;
+                predictedData = new Array(numDays).fill(null);
+                upperBound = new Array(numDays).fill(null);
+                lowerBound = new Array(numDays).fill(null);
+
+                // Make AJAX requests for each day
+                const predictions = [];
+                let completedRequests = 0;
+
+                forecastDates.forEach((date, index) => {
+                    const dateObj = new Date(startDate);
+                    dateObj.setDate(dateObj.getDate() + index);
+                    const formattedDate = dateObj.toISOString().split('T')[0];
+
+                    $.ajax({
+                        url: '/predict',
+                        type: 'POST',
+                        data: {
+                            date: formattedDate,
+                            area: formValues.area,
+                            temperature: formValues.temperature,
+                            humidity: formValues.humidity
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success) {
+                                const predictedDemand = (response.prediction * 1000).toFixed(2); // Convert GW to kW
+                                const upperLimit = (parseFloat(predictedDemand) + 400).toFixed(2);
+                                const lowerLimit = (parseFloat(predictedDemand) - 400).toFixed(2);
+
+                                predictedData[index] = predictedDemand;
+                                upperBound[index] = upperLimit;
+                                lowerBound[index] = lowerLimit;
+                                predictions.push(parseFloat(predictedDemand));
+                            } else {
+                                console.error(`Prediction failed for ${formattedDate}: ${response.error}`);
+                                predictedData[index] = null;
+                                upperBound[index] = null;
+                                lowerBound[index] = null;
+                            }
+
+                            completedRequests++;
+                            if (completedRequests === numDays) {
+                                finalizeForecast(predictions, chart);
+                            }
+                        },
+                        error: function() {
+                            console.error(`AJAX request failed for ${formattedDate}`);
+                            predictedData[index] = null;
+                            upperBound[index] = null;
+                            lowerBound[index] = null;
+                            completedRequests++;
+                            if (completedRequests === numDays) {
+                                finalizeForecast(predictions, chart);
+                            }
+                        }
+                    });
+                });
+
+                function finalizeForecast(predictions, chart) {
+                    // Calculate average predicted demand for summary
+                    const validPredictions = predictions.filter(p => p !== null);
+                    const avgDemand = validPredictions.length > 0
+                        ? (validPredictions.reduce((sum, val) => sum + val, 0) / validPredictions.length).toFixed(2)
+                        : 'N/A';
+
+                    // Update prediction summary
+                    $('#summaryDemand').text(avgDemand === 'N/A' ? 'N/A' : avgDemand + ' kW');
+                    $('#summaryConfidence').text(avgDemand === 'N/A' ? 'N/A' : '90%');
+
+                    // Update chart
+                    chart.data.labels = forecastDates;
+                    chart.data.datasets[0].data = predictedData;
+                    chart.data.datasets[1].data = upperBound;
+                    chart.data.datasets[2].data = lowerBound;
+                    chart.update();
+
+                    const message = avgDemand === 'N/A'
+                        ? 'Some predictions failed. Please try again.'
+                        : `Forecast generated successfully for ${numDays} days: Average ${avgDemand} kW`;
+                    alert(message);
+                }
+            }
+
+            // Initialize prediction summary
+            $('#summaryDemand').text('N/A');
+            $('#summaryConfidence').text('N/A');
+        });
+    </script>
+</body>
+</html>
